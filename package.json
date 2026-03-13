@@ -1,0 +1,25 @@
+{
+  "name": "infbot",
+  "version": "1.0.0",
+  "description": "Discord bot for the INFHUB Discord server",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexljn5/infbot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/alexljn5/infbot/issues"
+  },
+  "homepage": "https://github.com/alexljn5/infbot#readme",
+  "dependencies": {
+    "discord.js": "^14.25.1",
+    "dotenv": "^17.3.1"
+  }
+}
