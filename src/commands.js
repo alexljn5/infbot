@@ -95,10 +95,6 @@ module.exports = {
     talk: {
         description: ".talk - Creates a permanent-ish thread to chat with Cream!",
         execute: async (message) => {
-            if (!["alexljn5", "thatguysauron"].includes(message.author.username)) {
-                return message.reply("Sorry, this command is only for certain users.");
-            }
-
             let thread;
             try {
                 thread = await message.channel.threads.create({
