@@ -20,7 +20,7 @@ client.login(process.env.TOKEN).catch(err => {
     process.exit(1);
 });
 
-client.once('ready', () => {
+client.once('clientReady', () => {
     console.log(`Bot is live and hot-reload works! ${new Date().toLocaleTimeString()}`);
 });
 

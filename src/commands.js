@@ -73,9 +73,9 @@ module.exports = {
             try {
                 const img = await getRandomCreamImage();
                 const embed = new EmbedBuilder()
-                    .setTitle('Cream the Rabbit!')
+                    .setTitle('⛓ Cream The Rabbit ⛓')
                     .setImage(img)
-                    .setColor('#FFB6C1');
+                    .setColor('#ff0002');
                 await message.channel.send({ embeds: [embed] });
             } catch (err) {
                 console.error(err);
