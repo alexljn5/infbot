@@ -5,3 +5,6 @@ src/.env
 .env
 package-lock.json
 start_infbot.sh
+src/ascii/cat1.txt
+src/ascii/cat2.txt
+src/ascii/cat3.txt

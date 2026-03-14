@@ -1,6 +1,6 @@
 require('dotenv').config();
-
 const { Client, GatewayIntentBits } = require('discord.js');
+const commands = require('./commands'); // load your commands
 
 const client = new Client({
     intents: [
@@ -24,4 +24,16 @@ client.once('ready', () => {
     console.log(`Bot is live and hot-reload works! ${new Date().toLocaleTimeString()}`);
 });
 
+client.on('messageCreate', (message) => {
+    if (message.author.bot) return;
 
+    // Simple prefix for commands
+    const prefix = '.';
+    if (!message.content.startsWith(prefix)) return;
+
+    const args = message.content.slice(prefix.length).trim().split(/\s+/);
+    const commandName = args.shift().toLowerCase();
+
+    const command = commands[commandName];
+    if (command) command.execute(message);
+});
