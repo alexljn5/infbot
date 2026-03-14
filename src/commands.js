@@ -2,10 +2,38 @@ const { EmbedBuilder } = require('discord.js');
 const { getRandomCreamImage } = require('./network/cream_net_fetch');
 const { getRandomBigImage } = require('./network/big_net_fetch');
 const { handleCreamMessage } = require('./creamai/cream');
+const { callAgonyCreamAI } = require('./creamai/agonycream');
 
 const greetedThreads = new Set();
 
 module.exports = {
+    help: {
+        description: ".help - Lists all available bot commands",
+        execute: async (message) => {
+            try {
+                const commandNames = Object.keys(module.exports).filter(k => k !== 'help');
+                const embed = new EmbedBuilder()
+                    .setTitle("INFBOT Commands")
+                    .setColor("#ff0002")
+                    .setThumbnail(message.client.user.displayAvatarURL()) // Bot avatar
+                    .setDescription("Here's a list of commands you can use:");
+
+                for (const name of commandNames) {
+                    const cmd = module.exports[name];
+                    embed.addFields({
+                        name: `.${name}`,
+                        value: cmd.description || "No description",
+                        inline: false
+                    });
+                }
+
+                await message.channel.send({ embeds: [embed] });
+            } catch (err) {
+                console.error("Help command error:", err);
+                await message.reply("Couldn't generate help list… try again?");
+            }
+        }
+    },
     cat: {
         description: 'Random ASCII cat!',
         execute: (message) => {
@@ -161,8 +189,20 @@ module.exports = {
                     await thread.send("Oopsie… Cream's brain went poof!");
                 }
             });
+        }
+    },
+    agony: {
+        description: ".agony - Ask INFBOT to produce unsettling text",
+        execute: async (message) => {
+            const prompt = message.content.slice(7).trim() || "Describe a surreal, eerie scenario.";
 
-            // Optional: store listener if you want to remove it later
+            try {
+                const response = await callAgonyCreamAI(prompt);
+                await message.reply(response);
+            } catch (err) {
+                console.error("Agony command error:", err);
+                await message.reply("INFBOT couldn't think… darkness too heavy.");
+            }
         }
     }
 };

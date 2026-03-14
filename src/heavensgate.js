@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const commands = require('./commands'); // load your commands
+const { startPopups } = require('./randompopups');
 
 const client = new Client({
     intents: [
@@ -36,4 +37,10 @@ client.on('messageCreate', (message) => {
 
     const command = commands[commandName];
     if (command) command.execute(message);
+});
+
+// start popups in a specific channel
+client.once('clientReady', () => {
+    console.log(`Logged in as ${client.user.tag}`);
+    startPopups(client, 'YOUR_CHANNEL_ID'); // replace with your actual channel ID
 });
