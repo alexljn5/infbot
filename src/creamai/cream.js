@@ -40,7 +40,7 @@ if (initError) {
 // ── Call Hugging Face AI ──
 async function callHuggingFaceAI(text) {
     if (!hfClient) {
-        return `🤖 Cream AI is offline: ${initError || "No valid HF_TOKEN found"}`;
+        return `Cream AI is offline: ${initError || "No valid HF_TOKEN found"}`;
     }
 
     try {

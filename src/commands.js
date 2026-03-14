@@ -3,6 +3,8 @@ const { getRandomCreamImage } = require('./network/cream_net_fetch');
 const { getRandomBigImage } = require('./network/big_net_fetch');
 const { handleCreamMessage } = require('./creamai/cream');
 
+const greetedThreads = new Set();
+
 module.exports = {
     cat: {
         description: 'Random ASCII cat!',
@@ -91,62 +93,62 @@ module.exports = {
         }
     },
     talk: {
-        description: ".talk - Creates a temporary thread to chat with Cream!",
+        description: ".talk - Creates a permanent-ish thread to chat with Cream!",
         execute: async (message) => {
-            if (message.author.username !== "alexljn5" && message.author.username !== "thatguysauron") {
+            if (!["alexljn5", "thatguysauron"].includes(message.author.username)) {
                 return message.reply("Sorry, this command is only for certain users.");
             }
+
+            let thread;
             try {
-                const thread = await message.channel.threads.create({
+                thread = await message.channel.threads.create({
                     name: `Cream Chat - ${message.author.username}`,
-                    autoArchiveDuration: 60,  // 1 hour archive (Discord max for temp)
-                    reason: "Temporary chat with Cream",
+                    autoArchiveDuration: 1440, // 24 hours
+                    reason: "Chatting with Cream",
                 });
+            } catch (err) {
+                console.error("Failed to create thread:", err);
+                return message.reply("Could not create a temporary chat thread! Hop hop...");
+            }
 
-                let img;
-                try { img = await getRandomCreamImage(); } catch { img = null; }
+            let img;
+            try { img = await getRandomCreamImage(); } catch { img = null; }
 
-                if (img) {
-                    const embed = new EmbedBuilder()
-                        .setTitle(`Hi ${message.author.username}! Cream is here and listening~ 🐰💕`)
-                        .setImage(img)
-                        .setColor("#ff0002")
-                        .setDescription("Just talk to me normally in this thread! I'll reply as Cream the Rabbit ♡");
-                    await thread.send({ embeds: [embed] });
-                } else {
-                    await thread.send(`Hi ${message.author.username}! Cream is listening… 🐇`);
+            if (img) {
+                const embed = new EmbedBuilder()
+                    .setTitle(`Hi ${message.author.username}! Cream is here and listening~`)
+                    .setImage(img)
+                    .setColor("#ff0002")
+                    .setDescription("Just talk to me normally in this thread! I'll reply as Cream the Rabbit ♡");
+                await thread.send({ embeds: [embed] });
+            } else {
+                await thread.send(`Hi ${message.author.username}! Cream is listening…`);
+            }
+
+            const { client } = message;
+            const listener = async msg => {
+                if (msg.channel.id !== thread.id) return;
+                if (msg.author.bot) return; // IGNORE bot messages (including Cream)
+
+                // Send greeting only once per thread
+                if (!greetedThreads.has(thread.id)) {
+                    greetedThreads.add(thread.id);
+                    await thread.send("Hi hi~! Cream is here and super excited to chat! What’s on your mind?");
+                    return;
                 }
 
-                // Collector: listen for 5 minutes (300000 ms) instead of 30s
-                const collector = thread.createMessageCollector({
-                    filter: m => !m.author.bot,
-                    time: 300000
-                });
+                try {
+                    const response = await handleCreamMessage(msg);
+                    await thread.send(response?.trim() || "…Cream is a bit shy right now");
+                } catch (err) {
+                    console.error("AI response error in thread:", err);
+                    await thread.send("Oopsie… Cream's brain went poof! Try again?");
+                }
+            };
 
-                collector.on("collect", async (msg) => {
-                    try {
-                        const response = await handleCreamMessage(msg);
-                        const contentToSend = response?.trim() || "…Cream is a bit shy right now 😳";
-                        await thread.send(contentToSend);
-                    } catch (err) {
-                        console.error("AI response error in thread:", err);
-                        await thread.send("Oopsie… Cream's brain went poof! Try again?");
-                    }
-                });
+            client.on("messageCreate", listener);
 
-                collector.on("end", async () => {
-                    try {
-                        await thread.send("Cream has to hop away now… bye bye~! 🐰👋 (thread closing)");
-                        await thread.delete("Chat session ended");
-                    } catch (e) {
-                        console.error("Failed to close thread:", e);
-                    }
-                });
-
-            } catch (err) {
-                console.error(err);
-                message.reply("Could not create a temporary chat thread! Hop hop...");
-            }
+            // Optional: store listener if you want to remove it later
         }
     }
 };
