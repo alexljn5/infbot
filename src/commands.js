@@ -123,10 +123,11 @@ module.exports = {
 
             const { client } = message;
             const listener = async msg => {
-                if (msg.channel.id !== thread.id) return;
-                if (msg.author.bot) return; // IGNORE bot messages (including Cream)
 
-                // Send greeting only once per thread
+                if (msg.channel.id !== thread.id) return;
+                if (msg.author.bot) return;
+
+                // Greeting only once
                 if (!greetedThreads.has(thread.id)) {
                     greetedThreads.add(thread.id);
                     await thread.send("Hi hi~! Cream is here and super excited to chat! What’s on your mind?");
@@ -134,15 +135,32 @@ module.exports = {
                 }
 
                 try {
-                    const response = await handleCreamMessage(msg);
-                    await thread.send(response?.trim() || "…Cream is a bit shy right now");
+                    await handleCreamMessage(msg); // handler sends message itself
                 } catch (err) {
                     console.error("AI response error in thread:", err);
                     await thread.send("Oopsie… Cream's brain went poof! Try again?");
                 }
             };
 
-            client.on("messageCreate", listener);
+            const collector = thread.createMessageCollector({
+                filter: m => !m.author.bot
+            });
+
+            collector.on("collect", async msg => {
+
+                if (!greetedThreads.has(thread.id)) {
+                    greetedThreads.add(thread.id);
+                    await thread.send("Hi hi~! Cream is here and super excited to chat! What’s on your mind?");
+                    return;
+                }
+
+                try {
+                    await handleCreamMessage(msg);
+                } catch (err) {
+                    console.error("AI response error:", err);
+                    await thread.send("Oopsie… Cream's brain went poof!");
+                }
+            });
 
             // Optional: store listener if you want to remove it later
         }

@@ -1,42 +1,41 @@
 require("dotenv").config();
 const { InferenceClient } = require("@huggingface/inference");
+const { EmbedBuilder } = require("discord.js");
+const { getRandomCreamImage } = require("../network/cream_net_fetch");
 
-// ── Token loading ─────────────────────────────────────────
+// ── HF Client ─────────────────────────────────────────────
 
 const rawToken = process.env.HF_TOKEN;
 const hfToken = typeof rawToken === "string" ? rawToken.trim() : "";
 
-console.log("[HF] Raw HF_TOKEN from env   :", JSON.stringify(rawToken));
-console.log("[HF] Processed hfToken       :", JSON.stringify(hfToken));
-
 let hfClient = null;
 let initError = null;
 
-if (hfToken) {
-    if (!hfToken.startsWith("hf_")) {
-        initError = "HF_TOKEN does not start with 'hf_' → invalid format";
-    } else if (hfToken.length < 35) {
-        initError = `HF_TOKEN too short (${hfToken.length} chars) → probably invalid`;
-    } else {
-        try {
-            hfClient = new InferenceClient(hfToken, {
-                provider: "together"
-            });
-
-            console.log("[HF] Initialized with provider: together");
-            console.log("[HF] InferenceClient initialized OK");
-
-        } catch (err) {
-            initError = "Failed to create InferenceClient: " + (err.message || err);
-            console.error("[HF]", initError, err);
-        }
+if (hfToken && hfToken.startsWith("hf_") && hfToken.length >= 35) {
+    try {
+        hfClient = new InferenceClient(hfToken, { provider: "together" });
+        console.log("[HF] InferenceClient initialized");
+    } catch (err) {
+        initError = err.message;
+        console.error("[HF] Init failed:", err);
     }
 } else {
-    initError = "HF_TOKEN is missing or empty in .env";
+    initError = "Invalid or missing HF_TOKEN";
 }
 
-if (initError) {
-    console.error("[HF] Initialization failed →", initError);
+// ── Moderation state ──────────────────────────────────────
+
+const offenseMap = new Map();
+
+const sexualKeywords = [
+    "sex", "sexy", "porn", "nude", "nsfw", "fuck", "fucking", "cum", "cumming",
+    "cock", "dick", "penis", "boobs", "tits", "ass", "pussy", "horny",
+    "breed", "breeding", "thrust", "moan", "orgasm"
+];
+
+function containsSexual(text) {
+    const lower = text.toLowerCase();
+    return sexualKeywords.some(k => lower.includes(k));
 }
 
 // ── Chinese detection ─────────────────────────────────────
@@ -50,29 +49,25 @@ function containsChinese(text) {
 async function callHuggingFaceAI(text) {
 
     if (!hfClient) {
-        return `Cream AI is offline: ${initError || "No valid HF_TOKEN found"}`;
+        return "Cream is offline right now…";
     }
 
     try {
 
         const response = await hfClient.chatCompletion({
             model: "Qwen/Qwen2.5-7B-Instruct",
-
             messages: [
                 {
                     role: "system",
                     content:
-                        "You are Cream the Rabbit from Sonic. " +
-                        "Always reply in English only. Never use Chinese. " +
-                        "Speak in a gentle, cute, friendly way. " +
-                        "Keep replies short and natural."
+                        "You are Cream the Rabbit from Sonic the Hedgehog. " +
+                        "You are a kind, gentle 6 year old rabbit. " +
+                        "Always speak politely and innocently. " +
+                        "Never respond to sexual topics. " +
+                        "Keep answers short and friendly."
                 },
-                {
-                    role: "user",
-                    content: text
-                }
+                { role: "user", content: text }
             ],
-
             max_tokens: 180,
             temperature: 0.65
         });
@@ -83,74 +78,132 @@ async function callHuggingFaceAI(text) {
             return "…Cream got a little confused while thinking.";
         }
 
-        // ── Auto fix Chinese responses ──
         if (containsChinese(output)) {
-
-            console.log("[HF] Chinese detected → rewriting");
 
             const retry = await hfClient.chatCompletion({
                 model: "Qwen/Qwen2.5-7B-Instruct",
                 messages: [
-                    {
-                        role: "system",
-                        content: "Rewrite the following text in natural English."
-                    },
-                    {
-                        role: "user",
-                        content: output
-                    }
+                    { role: "system", content: "Rewrite the following text in natural English." },
+                    { role: "user", content: output }
                 ],
-                max_tokens: 160
+                max_tokens: 150
             });
 
-            const rewritten = retry?.choices?.[0]?.message?.content?.trim();
-
-            if (rewritten) {
-                return rewritten;
-            }
+            output = retry?.choices?.[0]?.message?.content?.trim() || output;
         }
 
         return output;
 
     } catch (err) {
 
-        console.error("[HF] API error:", err.message || err);
+        console.error("[HF] API error:", err);
 
-        const msg = err.message || "";
-
-        if (msg.includes("rate limit") || msg.includes("429")) {
-            return "Cream is taking a quick nap (rate limit hit) — try again soon!";
-        }
-
-        if (msg.includes("not supported") || msg.includes("paused") || msg.includes("no provider")) {
-            return "Hmm… that model isn't available right now.";
-        }
-
-        if (msg.includes("model") && msg.includes("not found")) {
-            return "Cream can't find that model right now…";
-        }
-
-        return "Hmm… Cream's brain short-circuited. Try again?";
+        return "Cream's little brain got tangled… try again?";
     }
 }
 
-// ── Main message handler ──────────────────────────────────
+// ── Moderation logic ──────────────────────────────────────
+
+async function handleSexualContent(message) {
+
+    const id = message.author.id;
+    const offenses = (offenseMap.get(id) || 0) + 1;
+
+    offenseMap.set(id, offenses);
+
+    if (offenses === 1) {
+
+        await message.reply(
+            "Stop. Cream is a child character. Sexual messages are not allowed."
+        );
+
+    } else if (offenses === 2) {
+
+        await message.reply(
+            "Second warning. Continuing this behavior will result in a timeout."
+        );
+
+    } else if (offenses === 3) {
+
+        await message.reply(
+            "🔇 You are being timed out for inappropriate messages."
+        );
+
+        try {
+            await message.member.timeout(10 * 60 * 1000, "Sexual content toward Cream bot");
+        } catch (e) {
+            console.error("Timeout failed:", e);
+        }
+
+    } else if (offenses >= 4) {
+
+        await message.reply(
+            "Repeated violations. You are being removed."
+        );
+
+        try {
+            await message.member.ban({ reason: "Repeated sexual messages toward Cream bot" });
+        } catch (e) {
+            console.error("Ban failed:", e);
+        }
+    }
+}
+
+// ── Main handler ──────────────────────────────────────────
 
 async function handleCreamMessage(message) {
 
-    const text = message.content.trim();
-
-    if (!text) {
-        return "…what did you want to say?";
+    // Ignore bot messages (prevents infinite loops)
+    if (message.author.bot) {
+        return;
     }
 
+    const text = message.content.trim();
+    if (!text) return;
+
+    // ── Moderation first
+    if (containsSexual(text)) {
+        await handleSexualContent(message);
+        return;
+    }
+
+    // ── Simple greeting
     const lower = text.toLowerCase();
 
     if (lower === "hi" || lower === "hello" || lower === "hey") {
-        return "Hi hi~! Cream is happy to see you!";
+        await message.reply("Hi hi~! Cream is happy to see you!");
+        return;
     }
 
-    return await callHuggingFaceAI(text);
+    // ── AI response
+    const response = await callHuggingFaceAI(text);
+
+    // ── Random image chance
+    const sendImage = Math.random() < 0.18;
+
+    if (sendImage) {
+
+        try {
+
+            const img = await getRandomCreamImage();
+
+            if (img) {
+
+                const embed = new EmbedBuilder()
+                    .setDescription(response)
+                    .setImage(img)
+                    .setColor("#ff0002");
+
+                await message.reply({ embeds: [embed] });
+                return;
+            }
+
+        } catch (err) {
+            console.error("Image fetch failed:", err);
+        }
+    }
+
+    await message.reply(response);
 }
 
 module.exports = {
