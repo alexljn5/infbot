@@ -1,26 +1,9 @@
 const { EmbedBuilder } = require('discord.js');
 const { getRandomCreamImage } = require('./network/cream_net_fetch');
+const { getRandomBigImage } = require('./network/big_net_fetch');
+const { handleCreamMessage } = require('./creamai/cream');
 
 module.exports = {
-    hello: {
-        description: 'Replies with glitchy bnuuy!',
-        execute: (message) => {
-            message.reply('bnuuy!');
-        }
-    },
-    roll: {
-        description: 'Rolls dice: .roll [NdS] (default 1d6)',
-        execute: (message) => {
-            const args = message.content.slice(1).trim().split(/\s+/);
-            const diceStr = args[1] || '1d6';
-            const match = diceStr.match(/(\d+)d(\d+)/);
-            if (!match) return message.reply('Format: NdS e.g. 2d20');
-            const num = parseInt(match[1]);
-            const sides = parseInt(match[2]);
-            const rolls = Array.from({ length: num }, () => Math.floor(Math.random() * sides) + 1);
-            message.reply(`Rolls: ${rolls.join(', ')} = **${rolls.reduce((a, b) => a + b, 0)}**`);
-        }
-    },
     cat: {
         description: 'Random ASCII cat!',
         execute: (message) => {
@@ -42,12 +25,6 @@ module.exports = {
                 return message.reply('Error reading cat!');
             }
             message.reply(`\`\`\`\n${cat}\n\`\`\``);
-        }
-    },
-    meme: {
-        description: 'A cool ass meme',
-        execute: (message) => {
-            message.reply('When the code works but you don\'t know why: bruh');
         }
     },
     reverse: {
@@ -72,14 +49,103 @@ module.exports = {
         execute: async (message) => {
             try {
                 const img = await getRandomCreamImage();
+
+                // Try to find the emoji by name on the server
+                const serverEmoji = message.guild?.emojis.cache.find(e => e.name === 'serveradmin');
+                const emojiStr = serverEmoji ? `<:${serverEmoji.name}:${serverEmoji.id}>` : '⛓';
+
                 const embed = new EmbedBuilder()
-                    .setTitle('⛓ Cream The Rabbit ⛓')
+                    .setTitle(`${emojiStr} Cream The Rabbit ${emojiStr}`)
                     .setImage(img)
                     .setColor('#ff0002');
+
                 await message.channel.send({ embeds: [embed] });
+
             } catch (err) {
                 console.error(err);
                 message.reply('Error fetching Cream image!');
+            }
+        }
+    },
+    big: {
+        description: '.big - Random Big the Cat image',
+        execute: async (message) => {
+            try {
+                const img = await getRandomBigImage();
+
+                // Try to find the emoji by name on the server
+                const serverEmoji = message.guild?.emojis.cache.find(e => e.name === 'big');
+                const emojiStr = serverEmoji ? `<:${serverEmoji.name}:${serverEmoji.id}>` : '';
+
+                const embed = new EmbedBuilder()
+                    .setTitle(`${emojiStr} Big the Cat ${emojiStr}`)
+                    .setImage(img)
+                    .setColor('#7A4FBF');
+
+                await message.channel.send({ embeds: [embed] });
+
+            } catch (err) {
+                console.error(err);
+                message.reply('Error fetching Big image!');
+            }
+        }
+    },
+    talk: {
+        description: ".talk - Creates a temporary thread to chat with Cream!",
+        execute: async (message) => {
+            if (message.author.username !== "alexljn5" && message.author.username !== "thatguysauron") {
+                return message.reply("Sorry, this command is only for certain users.");
+            }
+            try {
+                const thread = await message.channel.threads.create({
+                    name: `Cream Chat - ${message.author.username}`,
+                    autoArchiveDuration: 60,  // 1 hour archive (Discord max for temp)
+                    reason: "Temporary chat with Cream",
+                });
+
+                let img;
+                try { img = await getRandomCreamImage(); } catch { img = null; }
+
+                if (img) {
+                    const embed = new EmbedBuilder()
+                        .setTitle(`Hi ${message.author.username}! Cream is here and listening~ 🐰💕`)
+                        .setImage(img)
+                        .setColor("#ff0002")
+                        .setDescription("Just talk to me normally in this thread! I'll reply as Cream the Rabbit ♡");
+                    await thread.send({ embeds: [embed] });
+                } else {
+                    await thread.send(`Hi ${message.author.username}! Cream is listening… 🐇`);
+                }
+
+                // Collector: listen for 5 minutes (300000 ms) instead of 30s
+                const collector = thread.createMessageCollector({
+                    filter: m => !m.author.bot,
+                    time: 300000
+                });
+
+                collector.on("collect", async (msg) => {
+                    try {
+                        const response = await handleCreamMessage(msg);
+                        const contentToSend = response?.trim() || "…Cream is a bit shy right now 😳";
+                        await thread.send(contentToSend);
+                    } catch (err) {
+                        console.error("AI response error in thread:", err);
+                        await thread.send("Oopsie… Cream's brain went poof! Try again?");
+                    }
+                });
+
+                collector.on("end", async () => {
+                    try {
+                        await thread.send("Cream has to hop away now… bye bye~! 🐰👋 (thread closing)");
+                        await thread.delete("Chat session ended");
+                    } catch (e) {
+                        console.error("Failed to close thread:", e);
+                    }
+                });
+
+            } catch (err) {
+                console.error(err);
+                message.reply("Could not create a temporary chat thread! Hop hop...");
             }
         }
     }
