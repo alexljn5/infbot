@@ -4,3 +4,4 @@ notes.txt
 src/.env
 .env
 package-lock.json
+start_infbot.sh

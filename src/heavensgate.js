@@ -6,7 +6,7 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent  // make sure this is enabled in portal
+        GatewayIntentBits.MessageContent
     ]
 });
 
@@ -21,5 +21,7 @@ client.login(process.env.TOKEN).catch(err => {
 });
 
 client.once('ready', () => {
-    console.log(`Logged in as ${client.user.tag}`);
+    console.log(`Bot is live and hot-reload works! ${new Date().toLocaleTimeString()}`);
 });
+
+
