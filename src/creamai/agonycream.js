@@ -28,7 +28,7 @@ function containsChinese(text) {
 // ── Agony AI call ──────────────────────────────────────
 async function callAgonyCreamAI(prompt) {
     if (!hfClient) {
-        return `INFBOT_Agony AI is offline: ${initError || "No valid HF_TOKEN found"}`;
+        return `Cream_In_Agony AI is offline: ${initError || "No valid HF_TOKEN found"}`;
     }
 
     try {
@@ -38,7 +38,7 @@ async function callAgonyCreamAI(prompt) {
                 {
                     role: "system",
                     content:
-                        "You are INFBOT_Agony, a surreal and industrially disturbing version of Cream the Rabbit. " +
+                        "You are Cream in agony, a surreal and industrially disturbing version of Cream the Rabbit. " +
                         "Your responses evoke dark, mechanical dread, decaying factories, and oppressive machinery. " +
                         "Focus on hopelessness, existential unease, and industrial despair. " +
                         "Describe twisted industrial landscapes, grinding gears, smoke-choked rooms, and eerie mechanical sounds. " +
@@ -55,7 +55,7 @@ async function callAgonyCreamAI(prompt) {
 
         let output = response?.choices?.[0]?.message?.content?.trim();
 
-        if (!output) return "INFBOT_Agony whispers… the darkness is too heavy.";
+        if (!output) return "Cream_In_Agony whispers… the darkness is too heavy.";
 
         // Auto-rewrite if Chinese detected
         if (containsChinese(output)) {
@@ -73,7 +73,7 @@ async function callAgonyCreamAI(prompt) {
         return output;
 
     } catch (err) {
-        console.error("[HF][INFBOT_Agony] API error:", err.message || err);
+        console.error("[HF][Cream_In_Agony] API error:", err.message || err);
         return "INFBOT's thoughts twist in shadows… try again?";
     }
 }
