@@ -6,6 +6,7 @@ const { getRandomSonicImage } = require('./network/sonic_net_fetch');
 const { getRandomMetalsonicImage } = require('./network/metalsonic_net_fetch');
 const { getRandomAmyImage } = require('./network/amy_net_fetch');
 const { getRandomSonicexeImage } = require('./network/sonicexe_net_fetch');
+const { getRandomNeometalsonicImage } = require('./network/neo_metalsonic_net_fetch');
 const { handleCreamMessage } = require('./creamai/cream');
 const { callAgonyCreamAI } = require('./creamai/agonycream');
 
@@ -237,6 +238,29 @@ module.exports = {
             } catch (err) {
                 console.error(err);
                 message.reply('Error fetching Sonic.EXE image!');
+            }
+        }
+    },
+    neometal: {
+        description: '.neometal - Random Neo Metal Sonic image',
+        execute: async (message) => {
+            try {
+                const img = await getRandomNeometalsonicImage();
+
+                // Try to find the emoji by name on the server
+                const serverEmoji = message.guild?.emojis.cache.find(e => e.name === 'neometalsonic');
+                const emojiStr = serverEmoji ? `<:${serverEmoji.name}:${serverEmoji.id}>` : '';
+
+                const embed = new EmbedBuilder()
+                    .setTitle(`${emojiStr} Neo Metal Sonic ${emojiStr}`)
+                    .setImage(img)
+                    .setColor('#696969');
+
+                await message.channel.send({ embeds: [embed] });
+
+            } catch (err) {
+                console.error(err);
+                message.reply('Error fetching Neo Metal Sonic image!');
             }
         }
     },
