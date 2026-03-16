@@ -1,6 +1,10 @@
 const { EmbedBuilder } = require('discord.js');
 const { getRandomCreamImage } = require('./network/cream_net_fetch');
 const { getRandomBigImage } = require('./network/big_net_fetch');
+const { getRandomRougeImage } = require('./network/rouge_net_fetch');
+const { getRandomSonicImage } = require('./network/sonic_net_fetch');
+const { getRandomMetalsonicImage } = require('./network/metalsonic_net_fetch');
+const { getRandomAmyImage } = require('./network/amy_net_fetch');
 const { handleCreamMessage } = require('./creamai/cream');
 const { callAgonyCreamAI } = require('./creamai/agonycream');
 
@@ -117,6 +121,98 @@ module.exports = {
             } catch (err) {
                 console.error(err);
                 message.reply('Error fetching Big image!');
+            }
+        }
+    },
+    rouge: {
+        description: '.rouge - Random Rouge the Bat image',
+        execute: async (message) => {
+            try {
+                const img = await getRandomRougeImage();
+
+                // Try to find the emoji by name on the server
+                const serverEmoji = message.guild?.emojis.cache.find(e => e.name === 'rouge');
+                const emojiStr = serverEmoji ? `<:${serverEmoji.name}:${serverEmoji.id}>` : '';
+
+                const embed = new EmbedBuilder()
+                    .setTitle(`${emojiStr} Rouge the Bat ${emojiStr}`)
+                    .setImage(img)
+                    .setColor('#FFD700');
+
+                await message.channel.send({ embeds: [embed] });
+
+            } catch (err) {
+                console.error(err);
+                message.reply('Error fetching Rouge image!');
+            }
+        }
+    },
+    sonic: {
+        description: '.sonic - Random Sonic the Hedgehog image',
+        execute: async (message) => {
+            try {
+                const img = await getRandomSonicImage();
+
+                // Try to find the emoji by name on the server
+                const serverEmoji = message.guild?.emojis.cache.find(e => e.name === 'sonic');
+                const emojiStr = serverEmoji ? `<:${serverEmoji.name}:${serverEmoji.id}>` : '';
+
+                const embed = new EmbedBuilder()
+                    .setTitle(`${emojiStr} Sonic the Hedgehog ${emojiStr}`)
+                    .setImage(img)
+                    .setColor('#0066CC');
+
+                await message.channel.send({ embeds: [embed] });
+
+            } catch (err) {
+                console.error(err);
+                message.reply('Error fetching Sonic image!');
+            }
+        }
+    },
+    metalsonic: {
+        description: '.metalsonic - Random Metal Sonic image',
+        execute: async (message) => {
+            try {
+                const img = await getRandomMetalsonicImage();
+
+                // Try to find the emoji by name on the server
+                const serverEmoji = message.guild?.emojis.cache.find(e => e.name === 'metalsonic');
+                const emojiStr = serverEmoji ? `<:${serverEmoji.name}:${serverEmoji.id}>` : '';
+
+                const embed = new EmbedBuilder()
+                    .setTitle(`${emojiStr} Metal Sonic ${emojiStr}`)
+                    .setImage(img)
+                    .setColor('#A9A9A9');
+
+                await message.channel.send({ embeds: [embed] });
+
+            } catch (err) {
+                console.error(err);
+                message.reply('Error fetching Metal Sonic image!');
+            }
+        }
+    },
+    amy: {
+        description: '.amy - Random Amy Rose image',
+        execute: async (message) => {
+            try {
+                const img = await getRandomAmyImage();
+
+                // Try to find the emoji by name on the server
+                const serverEmoji = message.guild?.emojis.cache.find(e => e.name === 'amy');
+                const emojiStr = serverEmoji ? `<:${serverEmoji.name}:${serverEmoji.id}>` : '';
+
+                const embed = new EmbedBuilder()
+                    .setTitle(`${emojiStr} Amy Rose ${emojiStr}`)
+                    .setImage(img)
+                    .setColor('#FF69B4');
+
+                await message.channel.send({ embeds: [embed] });
+
+            } catch (err) {
+                console.error(err);
+                message.reply('Error fetching Amy image!');
             }
         }
     },

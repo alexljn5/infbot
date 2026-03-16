@@ -43,7 +43,7 @@ async function startPopups(client) {
         } catch (err) {
             console.error("[POPUPS] Failed to send message:", err);
         }
-    }, 5 * 60 * 1000 + Math.floor(Math.random() * 5 * 60 * 1000)); // 5–10 min
+    }, 5 * 60 * 2000 + Math.floor(Math.random() * 5 * 60 * 4000)); // 10-20 min
 }
 
 module.exports = { startPopups };
