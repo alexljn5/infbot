@@ -13,380 +13,228 @@ const { logError } = require('./logging/infbot_log_main');
 
 const greetedThreads = new Set();
 
+async function sendCharacterImage(
+    message,
+    fetchFn,
+    titleBase,
+    color,
+    emojiName = null
+) {
+    try {
+        const img = await fetchFn();
+        const serverEmoji = emojiName
+            ? message.guild?.emojis.cache.find(e => e.name.toLowerCase() === emojiName.toLowerCase())
+            : null;
+        const emojiStr = serverEmoji ? `<:${serverEmoji.name}:${serverEmoji.id}>` : '✨';
+
+        const embed = new EmbedBuilder()
+            .setTitle(`${emojiStr} ${titleBase} ${emojiStr}`)
+            .setImage(img)
+            .setColor(color)
+            .setTimestamp();
+
+        await message.channel.send({ embeds: [embed] });
+    } catch (err) {
+        const channelName = message.channel?.name || 'DM';
+        await logError(
+            message.client,
+            `Image Fetch Failed - ${titleBase}`,
+            `Failed to fetch image for **${message.author.tag}** in **${channelName}**`,
+            [
+                { name: 'User', value: `${message.author.tag} (${message.author.id})`, inline: true },
+                { name: 'Location', value: message.guild ? `${message.guild.name} (#${channelName})` : 'Direct Message', inline: true },
+                { name: 'Error', value: err.message || 'Unknown error', inline: false },
+                { name: 'Stack', value: (err.stack || 'No stack trace').slice(0, 800), inline: false }
+            ]
+        );
+        console.error(`[Image:${titleBase}]`, err);
+        await message.reply(`Oops… couldn't fetch **${titleBase}** right now! 🐾 Try again soon~`);
+    }
+}
+
 module.exports = {
     help: {
-        description: ".help - Lists all available bot commands",
+        description: '.help - Show all available commands',
         execute: async (message) => {
             try {
-                const commandNames = Object.keys(module.exports).filter(k => k !== 'help');
-                const embed = new EmbedBuilder()
-                    .setTitle("INFBOT Commands")
-                    .setColor("#ff0002")
-                    .setThumbnail(message.client.user.displayAvatarURL()) // Bot avatar
-                    .setDescription("Here's a list of commands you can use:");
-
-                for (const name of commandNames) {
-                    const cmd = module.exports[name];
-                    embed.addFields({
+                const commands = Object.entries(module.exports)
+                    .filter(([name]) => name !== 'help')
+                    .map(([name, cmd]) => ({
                         name: `.${name}`,
-                        value: cmd.description || "No description",
+                        value: cmd.description || 'No description',
                         inline: false
-                    });
-                }
+                    }));
+
+                const embed = new EmbedBuilder()
+                    .setTitle('INFBOT Commands ♡')
+                    .setColor('#ff0002')
+                    .setThumbnail(message.client.user.displayAvatarURL())
+                    .setDescription('Here are all the cute commands you can use~')
+                    .addFields(commands)
+                    .setFooter({ text: `Requested by ${message.author.tag}` });
 
                 await message.channel.send({ embeds: [embed] });
             } catch (err) {
-                console.error("Help command error:", err);
-                await message.reply("Couldn't generate help list… try again?");
+                await logError(
+                    message.client,
+                    'Help Command Failed',
+                    `Failed to generate help embed for ${message.author.tag}`,
+                    [{ name: 'Error', value: err.message }]
+                );
+                await message.reply("Couldn't show the help list… something went hoppy wrong! 🐰");
             }
         }
     },
+
+    // ────────────────────────────────────────────────
+    // Character image commands (using shared helper)
+    // ────────────────────────────────────────────────
+    cream: {
+        description: '.cream - Random Cream the Rabbit image',
+        execute: (message) => sendCharacterImage(message, getRandomCreamImage, 'Cream The Rabbit', '#ff0002', 'serveradmin')
+    },
+    big: {
+        description: '.big - Random Big the Cat image',
+        execute: (message) => sendCharacterImage(message, getRandomBigImage, 'Big the Cat', '#7A4FBF', 'big')
+    },
+    rouge: {
+        description: '.rouge - Random Rouge the Bat image',
+        execute: (message) => sendCharacterImage(message, getRandomRougeImage, 'Rouge the Bat', '#FFD700', 'rouge')
+    },
+    sonic: {
+        description: '.sonic - Random Sonic the Hedgehog image',
+        execute: (message) => sendCharacterImage(message, getRandomSonicImage, 'Sonic the Hedgehog', '#0066CC', 'sonic')
+    },
+    metal: {
+        description: '.metal - Random Metal Sonic image',
+        execute: (message) => sendCharacterImage(message, getRandomMetalsonicImage, 'Metal Sonic', '#A9A9A9', 'metalsonic')
+    },
+    amy: {
+        description: '.amy - Random Amy Rose image',
+        execute: (message) => sendCharacterImage(message, getRandomAmyImage, 'Amy Rose', '#FF69B4', 'amy')
+    },
+    sonicexe: {
+        description: '.sonicexe - Random Sonic.EXE image',
+        execute: (message) => sendCharacterImage(message, getRandomSonicexeImage, 'Sonic.EXE', '#8B0000', 'sonicexe')
+    },
+    neometal: {
+        description: '.neometal - Random Neo Metal Sonic image',
+        execute: (message) => sendCharacterImage(message, getRandomNeometalsonicImage, 'Neo Metal Sonic', '#696969', 'neometalsonic')
+    },
+
     cat: {
         description: 'Random ASCII cat!',
         execute: (message) => {
             const fs = require('fs');
             const path = require('path');
             const dir = path.join(__dirname, 'ascii');
-            let files;
+
             try {
-                files = fs.readdirSync(dir).filter(f => /^cat\d+\.txt$/.test(f));
-            } catch {
-                return message.reply('No ascii dir!');
+                const files = fs.readdirSync(dir).filter(f => /^cat\d+\.txt$/.test(f));
+                if (files.length === 0) return message.reply('No cat files found! 😿');
+
+                const randomFile = files[Math.floor(Math.random() * files.length)];
+                const cat = fs.readFileSync(path.join(dir, randomFile), 'utf8').trim();
+
+                message.reply(`\`\`\`\n${cat}\n\`\`\``);
+            } catch (err) {
+                logError(message.client, 'ASCII Cat Failed', 'Could not read ASCII cat files', [
+                    { name: 'Error', value: err.message }
+                ]);
+                message.reply('No ascii dir or error reading cats! 🐱💔');
             }
-            if (files.length === 0) return message.reply('No cat files!');
-            const randomFile = files[Math.floor(Math.random() * files.length)];
-            let cat;
-            try {
-                cat = fs.readFileSync(path.join(dir, randomFile), 'utf8').trim();
-            } catch {
-                return message.reply('Error reading cat!');
-            }
-            message.reply(`\`\`\`\n${cat}\n\`\`\``);
         }
     },
+
     reverse: {
         description: 'Reverse text',
         execute: (message) => {
             const text = message.content.slice(9).trim();
-            const reversed = text.split(' ').reverse().join(' ');
-            message.reply(reversed || 'Nothing to reverse!');
+            if (!text) return message.reply('Nothing to reverse! Try `.reverse hello`');
+            const reversed = text.split('').reverse().join('');
+            message.reply(reversed);
         }
     },
+
     zalgo: {
-        description: 'Zalgo text',
+        description: 'Zalgo text generator',
         execute: (message) => {
             const chars = '\u030d\u030e\u0304\u0305\u033f\u0311\u0306\u0310\u0352\u0357\u0351\u0307\u0308\u0303\u0302\u030a\u0348\u0341\u0344\u034a\u034b\u034c'.split('');
             const text = message.content.slice(6).trim() || 'zalgo';
-            const zalgoed = [...text].map(c => c + Array.from({ length: Math.floor(Math.random() * 7) }, () => chars[Math.floor(Math.random() * chars.length)]).join('')).join('');
-            message.reply(zalgoed);
+            const zalgoed = [...text].map(c =>
+                c + Array.from({ length: Math.floor(Math.random() * 7) }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+            ).join('');
+            message.reply(zalgoed || 'Zalgo ate the text!');
         }
     },
-    cream: {
-        description: '.cream - Random Cream the Rabbit image',
-        execute: async (message) => {
-            try {
-                const img = await getRandomCreamImage();
 
-                // Try to find the emoji by name on the server
-                const serverEmoji = message.guild?.emojis.cache.find(e => e.name === 'serveradmin');
-                const emojiStr = serverEmoji ? `<:${serverEmoji.name}:${serverEmoji.id}>` : '⛓';
-
-                const embed = new EmbedBuilder()
-                    .setTitle(`${emojiStr} Cream The Rabbit ${emojiStr}`)
-                    .setImage(img)
-                    .setColor('#ff0002');
-
-                await message.channel.send({ embeds: [embed] });
-
-            } catch (err) {
-                await logError(message.client, 'Image Fetch Failed - Cream', `Failed to fetch Cream image for user ${message.author.tag} in #${message.channel.name}`, [
-                    { name: 'User ID', value: message.author.id, inline: true },
-                    { name: 'Guild', value: message.guild.name, inline: true },
-                    { name: 'Error', value: err.message, inline: false }
-                ]);
-                console.error(err);
-                message.reply('Error fetching Cream image!');
-            }
-        }
-    },
-    big: {
-        description: '.big - Random Big the Cat image',
-        execute: async (message) => {
-            try {
-                const img = await getRandomBigImage();
-
-                // Try to find the emoji by name on the server
-                const serverEmoji = message.guild?.emojis.cache.find(e => e.name === 'big');
-                const emojiStr = serverEmoji ? `<:${serverEmoji.name}:${serverEmoji.id}>` : '';
-
-                const embed = new EmbedBuilder()
-                    .setTitle(`${emojiStr} Big the Cat ${emojiStr}`)
-                    .setImage(img)
-                    .setColor('#7A4FBF');
-
-                await message.channel.send({ embeds: [embed] });
-
-            } catch (err) {
-                await logError(message.client, 'Image Fetch Failed - Big', `Failed to fetch Big image for user ${message.author.tag} in #${message.channel.name}`, [
-                    { name: 'User ID', value: message.author.id, inline: true },
-                    { name: 'Guild', value: message.guild.name, inline: true },
-                    { name: 'Error', value: err.message, inline: false }
-                ]);
-                console.error(err);
-                message.reply('Error fetching Big image!');
-            }
-        }
-    },
-    rouge: {
-        description: '.rouge - Random Rouge the Bat image',
-        execute: async (message) => {
-            try {
-                const img = await getRandomRougeImage();
-
-                // Try to find the emoji by name on the server
-                const serverEmoji = message.guild?.emojis.cache.find(e => e.name === 'rouge');
-                const emojiStr = serverEmoji ? `<:${serverEmoji.name}:${serverEmoji.id}>` : '';
-
-                const embed = new EmbedBuilder()
-                    .setTitle(`${emojiStr} Rouge the Bat ${emojiStr}`)
-                    .setImage(img)
-                    .setColor('#FFD700');
-
-                await message.channel.send({ embeds: [embed] });
-
-            } catch (err) {
-                await logError(message.client, 'Image Fetch Failed - Rouge', `Failed to fetch Rouge image for user ${message.author.tag} in #${message.channel.name}`, [
-                    { name: 'User ID', value: message.author.id, inline: true },
-                    { name: 'Guild', value: message.guild.name, inline: true },
-                    { name: 'Error', value: err.message, inline: false }
-                ]);
-                console.error(err);
-                message.reply('Error fetching Rouge image!');
-            }
-        }
-    },
-    sonic: {
-        description: '.sonic - Random Sonic the Hedgehog image',
-        execute: async (message) => {
-            try {
-                const img = await getRandomSonicImage();
-
-                // Try to find the emoji by name on the server
-                const serverEmoji = message.guild?.emojis.cache.find(e => e.name === 'sonic');
-                const emojiStr = serverEmoji ? `<:${serverEmoji.name}:${serverEmoji.id}>` : '';
-
-                const embed = new EmbedBuilder()
-                    .setTitle(`${emojiStr} Sonic the Hedgehog ${emojiStr}`)
-                    .setImage(img)
-                    .setColor('#0066CC');
-
-                await message.channel.send({ embeds: [embed] });
-
-            } catch (err) {
-                await logError(message.client, 'Image Fetch Failed - Sonic', `Failed to fetch Sonic image for user ${message.author.tag} in #${message.channel.name}`, [
-                    { name: 'User ID', value: message.author.id, inline: true },
-                    { name: 'Guild', value: message.guild.name, inline: true },
-                    { name: 'Error', value: err.message, inline: false }
-                ]);
-                console.error(err);
-                message.reply('Error fetching Sonic image!');
-            }
-        }
-    },
-    metal: {
-        description: '.metal - Random Metal Sonic image',
-        execute: async (message) => {
-            try {
-                const img = await getRandomMetalsonicImage();
-
-                // Try to find the emoji by name on the server
-                const serverEmoji = message.guild?.emojis.cache.find(e => e.name === 'metalsonic');
-                const emojiStr = serverEmoji ? `<:${serverEmoji.name}:${serverEmoji.id}>` : '';
-
-                const embed = new EmbedBuilder()
-                    .setTitle(`${emojiStr} Metal Sonic ${emojiStr}`)
-                    .setImage(img)
-                    .setColor('#A9A9A9');
-
-                await message.channel.send({ embeds: [embed] });
-
-            } catch (err) {
-                await logError(message.client, 'Image Fetch Failed - Metal Sonic', `Failed to fetch Metal Sonic image for user ${message.author.tag} in #${message.channel.name}`, [
-                    { name: 'User ID', value: message.author.id, inline: true },
-                    { name: 'Guild', value: message.guild.name, inline: true },
-                    { name: 'Error', value: err.message, inline: false }
-                ]);
-                console.error(err);
-                message.reply('Error fetching Metal Sonic image!');
-            }
-        }
-    },
-    amy: {
-        description: '.amy - Random Amy Rose image',
-        execute: async (message) => {
-            try {
-                const img = await getRandomAmyImage();
-
-                // Try to find the emoji by name on the server
-                const serverEmoji = message.guild?.emojis.cache.find(e => e.name === 'amy');
-                const emojiStr = serverEmoji ? `<:${serverEmoji.name}:${serverEmoji.id}>` : '';
-
-                const embed = new EmbedBuilder()
-                    .setTitle(`${emojiStr} Amy Rose ${emojiStr}`)
-                    .setImage(img)
-                    .setColor('#FF69B4');
-
-                await message.channel.send({ embeds: [embed] });
-
-            } catch (err) {
-                await logError(message.client, 'Image Fetch Failed - Amy', `Failed to fetch Amy image for user ${message.author.tag} in #${message.channel.name}`, [
-                    { name: 'User ID', value: message.author.id, inline: true },
-                    { name: 'Guild', value: message.guild.name, inline: true },
-                    { name: 'Error', value: err.message, inline: false }
-                ]);
-                console.error(err);
-                message.reply('Error fetching Amy image!');
-            }
-        }
-    },
-    sonicexe: {
-        description: '.sonicexe - Random Sonic.EXE image',
-        execute: async (message) => {
-            try {
-                const img = await getRandomSonicexeImage();
-
-                // Try to find the emoji by name on the server
-                const serverEmoji = message.guild?.emojis.cache.find(e => e.name === 'sonicexe');
-                const emojiStr = serverEmoji ? `<:${serverEmoji.name}:${serverEmoji.id}>` : '';
-
-                const embed = new EmbedBuilder()
-                    .setTitle(`${emojiStr} Sonic.EXE ${emojiStr}`)
-                    .setImage(img)
-                    .setColor('#8B0000');
-
-                await message.channel.send({ embeds: [embed] });
-
-            } catch (err) {
-                await logError(message.client, 'Image Fetch Failed - Sonic.EXE', `Failed to fetch Sonic.EXE image for user ${message.author.tag} in #${message.channel.name}`, [
-                    { name: 'User ID', value: message.author.id, inline: true },
-                    { name: 'Guild', value: message.guild.name, inline: true },
-                    { name: 'Error', value: err.message, inline: false }
-                ]);
-                console.error(err);
-                message.reply('Error fetching Sonic.EXE image!');
-            }
-        }
-    },
-    neometal: {
-        description: '.neometal - Random Neo Metal Sonic image',
-        execute: async (message) => {
-            try {
-                const img = await getRandomNeometalsonicImage();
-
-                // Try to find the emoji by name on the server
-                const serverEmoji = message.guild?.emojis.cache.find(e => e.name === 'neometalsonic');
-                const emojiStr = serverEmoji ? `<:${serverEmoji.name}:${serverEmoji.id}>` : '';
-
-                const embed = new EmbedBuilder()
-                    .setTitle(`${emojiStr} Neo Metal Sonic ${emojiStr}`)
-                    .setImage(img)
-                    .setColor('#696969');
-
-                await message.channel.send({ embeds: [embed] });
-
-            } catch (err) {
-                await logError(message.client, 'Image Fetch Failed - Neo Metal Sonic', `Failed to fetch Neo Metal Sonic image for user ${message.author.tag} in #${message.channel.name}`, [
-                    { name: 'User ID', value: message.author.id, inline: true },
-                    { name: 'Guild', value: message.guild.name, inline: true },
-                    { name: 'Error', value: err.message, inline: false }
-                ]);
-                console.error(err);
-                message.reply('Error fetching Neo Metal Sonic image!');
-            }
-        }
-    },
     talk: {
-        description: ".talk - Creates a permanent-ish thread to chat with Cream!",
+        description: '.talk - Start a long-term chat thread with Cream!',
         execute: async (message) => {
             let thread;
             try {
                 thread = await message.channel.threads.create({
                     name: `Cream Chat - ${message.author.username}`,
                     autoArchiveDuration: 1440, // 24 hours
-                    reason: "Chatting with Cream",
+                    reason: 'Chatting with Cream ♡'
                 });
             } catch (err) {
-                console.error("Failed to create thread:", err);
-                return message.reply("Could not create a temporary chat thread! Hop hop...");
+                await logError(message.client, 'Thread Creation Failed', `User ${message.author.tag} couldn't create Cream thread`, [
+                    { name: 'Error', value: err.message }
+                ]);
+                return message.reply("Couldn't create chat thread… hop hop 🐰");
             }
 
-            let img;
-            try { img = await getRandomCreamImage(); } catch { img = null; }
-
-            if (img) {
+            // Greeting embed
+            try {
+                const img = await getRandomCreamImage().catch(() => null);
                 const embed = new EmbedBuilder()
-                    .setTitle(`Hi ${message.author.username}! Cream is here and listening~`)
-                    .setImage(img)
-                    .setColor("#ff0002")
-                    .setDescription("Just talk to me normally in this thread! I'll reply as Cream the Rabbit ♡");
+                    .setTitle(`Hi ${message.author.username}! Cream is here~ 🐰💕`)
+                    .setDescription("Just talk to me normally in this thread!\nI'll reply as Cream the Rabbit ♡")
+                    .setColor('#ff0002');
+
+                if (img) embed.setImage(img);
                 await thread.send({ embeds: [embed] });
-            } else {
-                await thread.send(`Hi ${message.author.username}! Cream is listening…`);
+            } catch (err) {
+                await thread.send("Hi hi~! Cream is listening… (image failed tho 😿)");
             }
 
-            const { client } = message;
-            const listener = async msg => {
+            // Message collector (no time limit – thread lives until archived)
+            const collector = thread.createMessageCollector({ filter: m => !m.author.bot });
 
-                if (msg.channel.id !== thread.id) return;
-                if (msg.author.bot) return;
-
-                // Greeting only once
-                if (!greetedThreads.has(thread.id)) {
-                    greetedThreads.add(thread.id);
-                    await thread.send("Hi hi~! Cream is here and super excited to chat! What’s on your mind?");
-                    return;
-                }
-
+            collector.on('collect', async (msg) => {
                 try {
-                    await handleCreamMessage(msg); // handler sends message itself
+                    // Optional: one-time greeting if needed (but handler can handle it)
+                    if (!greetedThreads.has(thread.id)) {
+                        greetedThreads.add(thread.id);
+                        await thread.send("Eeee~ hi hi hi!! Cream is bouncing with happiness! What’s on your mind? 🐇✨");
+                    }
+
+                    await handleCreamMessage(msg); // assumes it sends the reply itself
                 } catch (err) {
-                    console.error("AI response error in thread:", err);
-                    await thread.send("Oopsie… Cream's brain went poof! Try again?");
-                }
-            };
-
-            const collector = thread.createMessageCollector({
-                filter: m => !m.author.bot
-            });
-
-            collector.on("collect", async msg => {
-
-                if (!greetedThreads.has(thread.id)) {
-                    greetedThreads.add(thread.id);
-                    await thread.send("Hi hi~! Cream is here and super excited to chat! What’s on your mind?");
-                    return;
-                }
-
-                try {
-                    await handleCreamMessage(msg);
-                } catch (err) {
-                    console.error("AI response error:", err);
-                    await thread.send("Oopsie… Cream's brain went poof!");
+                    await logError(message.client, 'Cream AI Error in Thread', `Thread ${thread.id} – msg by ${msg.author.tag}`, [
+                        { name: 'User Message', value: msg.content.slice(0, 500) || '[empty]', inline: false },
+                        { name: 'Error', value: err.message, inline: false },
+                        { name: 'Stack', value: (err.stack || '').slice(0, 800), inline: false }
+                    ]);
+                    await thread.send("Oopsie… Cream's brain went poof! Try again? 😿💤");
                 }
             });
         }
     },
-    agony: {
-        description: ".agony - Ask INFBOT to produce unsettling text",
-        execute: async (message) => {
-            const prompt = message.content.slice(7).trim() || "Describe a surreal, eerie scenario.";
 
+    agony: {
+        description: '.agony - Ask INFBOT to produce unsettling text',
+        execute: async (message) => {
+            const prompt = message.content.slice(7).trim() || 'Describe a surreal, eerie scenario.';
             try {
                 const response = await callAgonyCreamAI(prompt);
-                await message.reply(response);
+                await message.reply(response || '…the void stared back.');
             } catch (err) {
-                console.error("Agony command error:", err);
-                await message.reply("INFBOT couldn't think… darkness too heavy.");
+                await logError(message.client, 'Agony Command Failed', `Prompt: "${prompt.slice(0, 200)}..." by ${message.author.tag}`, [
+                    { name: 'Error', value: err.message }
+                ]);
+                await message.reply("INFBOT couldn't think… the darkness is too thick tonight.");
             }
         }
     }
