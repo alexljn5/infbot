@@ -98,6 +98,12 @@ module.exports = {
 
                 await message.channel.send({ embeds: [embed] });
 
+                await logError(message.client, 'Image Fetch Success - Cream', `Successfully fetched Cream image for user ${message.author.tag} in #${message.channel.name}`, [
+                    { name: 'User ID', value: message.author.id, inline: true },
+                    { name: 'Guild', value: message.guild.name, inline: true },
+                    { name: 'Image URL', value: img, inline: false }
+                ]);
+
             } catch (err) {
                 await logError(message.client, 'Image Fetch Failed - Cream', `Failed to fetch Cream image for user ${message.author.tag} in #${message.channel.name}`, [
                     { name: 'User ID', value: message.author.id, inline: true },
