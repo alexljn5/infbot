@@ -5,6 +5,7 @@ const { getRandomRougeImage } = require('./network/rouge_net_fetch');
 const { getRandomSonicImage } = require('./network/sonic_net_fetch');
 const { getRandomMetalsonicImage } = require('./network/metalsonic_net_fetch');
 const { getRandomAmyImage } = require('./network/amy_net_fetch');
+const { getRandomSonicexeImage } = require('./network/sonicexe_net_fetch');
 const { handleCreamMessage } = require('./creamai/cream');
 const { callAgonyCreamAI } = require('./creamai/agonycream');
 
@@ -213,6 +214,29 @@ module.exports = {
             } catch (err) {
                 console.error(err);
                 message.reply('Error fetching Amy image!');
+            }
+        }
+    },
+    sonicexe: {
+        description: '.sonicexe - Random Sonic.EXE image',
+        execute: async (message) => {
+            try {
+                const img = await getRandomSonicexeImage();
+
+                // Try to find the emoji by name on the server
+                const serverEmoji = message.guild?.emojis.cache.find(e => e.name === 'sonicexe');
+                const emojiStr = serverEmoji ? `<:${serverEmoji.name}:${serverEmoji.id}>` : '';
+
+                const embed = new EmbedBuilder()
+                    .setTitle(`${emojiStr} Sonic.EXE ${emojiStr}`)
+                    .setImage(img)
+                    .setColor('#8B0000');
+
+                await message.channel.send({ embeds: [embed] });
+
+            } catch (err) {
+                console.error(err);
+                message.reply('Error fetching Sonic.EXE image!');
             }
         }
     },
