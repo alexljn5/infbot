@@ -9,6 +9,7 @@ const { getRandomSonicexeImage } = require('./network/sonicexe_net_fetch');
 const { getRandomNeometalsonicImage } = require('./network/neo_metalsonic_net_fetch');
 const { handleCreamMessage } = require('./creamai/cream');
 const { callAgonyCreamAI } = require('./creamai/agonycream');
+const { logError } = require('./logging/infbot_log_main');
 
 const greetedThreads = new Set();
 
@@ -98,6 +99,11 @@ module.exports = {
                 await message.channel.send({ embeds: [embed] });
 
             } catch (err) {
+                await logError(message.client, 'Image Fetch Failed - Cream', `Failed to fetch Cream image for user ${message.author.tag} in #${message.channel.name}`, [
+                    { name: 'User ID', value: message.author.id, inline: true },
+                    { name: 'Guild', value: message.guild.name, inline: true },
+                    { name: 'Error', value: err.message, inline: false }
+                ]);
                 console.error(err);
                 message.reply('Error fetching Cream image!');
             }
@@ -121,6 +127,11 @@ module.exports = {
                 await message.channel.send({ embeds: [embed] });
 
             } catch (err) {
+                await logError(message.client, 'Image Fetch Failed - Big', `Failed to fetch Big image for user ${message.author.tag} in #${message.channel.name}`, [
+                    { name: 'User ID', value: message.author.id, inline: true },
+                    { name: 'Guild', value: message.guild.name, inline: true },
+                    { name: 'Error', value: err.message, inline: false }
+                ]);
                 console.error(err);
                 message.reply('Error fetching Big image!');
             }
@@ -144,6 +155,11 @@ module.exports = {
                 await message.channel.send({ embeds: [embed] });
 
             } catch (err) {
+                await logError(message.client, 'Image Fetch Failed - Rouge', `Failed to fetch Rouge image for user ${message.author.tag} in #${message.channel.name}`, [
+                    { name: 'User ID', value: message.author.id, inline: true },
+                    { name: 'Guild', value: message.guild.name, inline: true },
+                    { name: 'Error', value: err.message, inline: false }
+                ]);
                 console.error(err);
                 message.reply('Error fetching Rouge image!');
             }
@@ -167,6 +183,11 @@ module.exports = {
                 await message.channel.send({ embeds: [embed] });
 
             } catch (err) {
+                await logError(message.client, 'Image Fetch Failed - Sonic', `Failed to fetch Sonic image for user ${message.author.tag} in #${message.channel.name}`, [
+                    { name: 'User ID', value: message.author.id, inline: true },
+                    { name: 'Guild', value: message.guild.name, inline: true },
+                    { name: 'Error', value: err.message, inline: false }
+                ]);
                 console.error(err);
                 message.reply('Error fetching Sonic image!');
             }
@@ -190,6 +211,11 @@ module.exports = {
                 await message.channel.send({ embeds: [embed] });
 
             } catch (err) {
+                await logError(message.client, 'Image Fetch Failed - Metal Sonic', `Failed to fetch Metal Sonic image for user ${message.author.tag} in #${message.channel.name}`, [
+                    { name: 'User ID', value: message.author.id, inline: true },
+                    { name: 'Guild', value: message.guild.name, inline: true },
+                    { name: 'Error', value: err.message, inline: false }
+                ]);
                 console.error(err);
                 message.reply('Error fetching Metal Sonic image!');
             }
@@ -213,6 +239,11 @@ module.exports = {
                 await message.channel.send({ embeds: [embed] });
 
             } catch (err) {
+                await logError(message.client, 'Image Fetch Failed - Amy', `Failed to fetch Amy image for user ${message.author.tag} in #${message.channel.name}`, [
+                    { name: 'User ID', value: message.author.id, inline: true },
+                    { name: 'Guild', value: message.guild.name, inline: true },
+                    { name: 'Error', value: err.message, inline: false }
+                ]);
                 console.error(err);
                 message.reply('Error fetching Amy image!');
             }
@@ -236,6 +267,11 @@ module.exports = {
                 await message.channel.send({ embeds: [embed] });
 
             } catch (err) {
+                await logError(message.client, 'Image Fetch Failed - Sonic.EXE', `Failed to fetch Sonic.EXE image for user ${message.author.tag} in #${message.channel.name}`, [
+                    { name: 'User ID', value: message.author.id, inline: true },
+                    { name: 'Guild', value: message.guild.name, inline: true },
+                    { name: 'Error', value: err.message, inline: false }
+                ]);
                 console.error(err);
                 message.reply('Error fetching Sonic.EXE image!');
             }
@@ -259,6 +295,11 @@ module.exports = {
                 await message.channel.send({ embeds: [embed] });
 
             } catch (err) {
+                await logError(message.client, 'Image Fetch Failed - Neo Metal Sonic', `Failed to fetch Neo Metal Sonic image for user ${message.author.tag} in #${message.channel.name}`, [
+                    { name: 'User ID', value: message.author.id, inline: true },
+                    { name: 'Guild', value: message.guild.name, inline: true },
+                    { name: 'Error', value: err.message, inline: false }
+                ]);
                 console.error(err);
                 message.reply('Error fetching Neo Metal Sonic image!');
             }
