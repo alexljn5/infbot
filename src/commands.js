@@ -170,8 +170,8 @@ module.exports = {
             }
         }
     },
-    metalsonic: {
-        description: '.metalsonic - Random Metal Sonic image',
+    metal: {
+        description: '.metal - Random Metal Sonic image',
         execute: async (message) => {
             try {
                 const img = await getRandomMetalsonicImage();
