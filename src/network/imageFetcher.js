@@ -6,8 +6,12 @@ function fetch(url, headers = {}) {
         https.get(url, { headers }, res => {
 
             let stream = res;
-            if (res.headers['content-encoding'] === 'gzip') stream = res.pipe(zlib.createGunzip());
-            else if (res.headers['content-encoding'] === 'deflate') stream = res.pipe(zlib.createInflate());
+
+            if (res.headers['content-encoding'] === 'gzip') {
+                stream = res.pipe(zlib.createGunzip());
+            } else if (res.headers['content-encoding'] === 'deflate') {
+                stream = res.pipe(zlib.createInflate());
+            }
 
             let data = '';
             stream.on('data', chunk => data += chunk);
@@ -25,73 +29,57 @@ function fetchJSON(url, headers = {}) {
 const DEFAULT_HEADERS = {
     'User-Agent': 'Mozilla/5.0',
     'Accept': '*/*',
-    'Accept-Encoding': 'gzip, deflate'
+    'Accept-Encoding': 'gzip, deflate',
+    'Referer': 'https://duckduckgo.com/'
 };
 
 /**
- * DuckDuckGo image search
+ * DuckDuckGo provider
  */
 async function duckduckgoImageSearch(query) {
     const encoded = encodeURIComponent(query);
-    const html = await fetch(`https://duckduckgo.com/?q=${encoded}`, { ...DEFAULT_HEADERS, 'Referer': 'https://duckduckgo.com/' });
+
+    const html = await fetch(
+        `https://duckduckgo.com/?q=${encoded}`,
+        DEFAULT_HEADERS
+    );
 
     const tokenMatch = html.match(/vqd=['"]?([0-9-]+)['"]?/);
-    if (!tokenMatch) throw new Error('DuckDuckGo vqd token not found');
+    if (!tokenMatch) throw new Error('vqd token not found');
+
     const vqd = tokenMatch[1];
 
-    const json = await fetchJSON(`https://duckduckgo.com/i.js?q=${encoded}&vqd=${vqd}&o=json&l=wt-wt&p=1`, DEFAULT_HEADERS);
-    return (json.results || []).map(r => r.image).filter(Boolean);
-}
+    const json = await fetchJSON(
+        `https://duckduckgo.com/i.js?q=${encoded}&vqd=${vqd}&o=json&l=wt-wt&p=1`,
+        DEFAULT_HEADERS
+    );
 
-/**
- * Bing free search (HTML scraping)
- */
-async function bingImageSearch(query) {
-    const encoded = encodeURIComponent(query);
-    const html = await fetch(`https://www.bing.com/images/search?q=${encoded}`, { ...DEFAULT_HEADERS, 'Referer': 'https://www.bing.com/' });
-
-    const urls = [];
-    const regex = /"murl":"(https?:\/\/[^"]+)"/g;
-    let match;
-    while ((match = regex.exec(html)) !== null) urls.push(match[1]);
-
-    return urls;
-}
-
-/**
- * Qwant image search
- */
-async function qwantImageSearch(query) {
-    const encoded = encodeURIComponent(query);
-    const json = await fetchJSON(`https://api.qwant.com/api/search/images?count=50&q=${encoded}&t=images&safesearch=1&locale=en_US&uiv=4`, DEFAULT_HEADERS);
-    return (json.data?.result?.items || []).map(i => i.media).filter(Boolean);
+    return (json.results || [])
+        .map(r => r.image)
+        .filter(Boolean);
 }
 
 /**
  * Public API
  */
-const PROVIDERS = {
-    duckduckgo: duckduckgoImageSearch,
-    bing: bingImageSearch,
-    qwant: qwantImageSearch
-};
+async function getRandomImage({ query, provider = 'duckduckgo' }) {
 
-async function getRandomImage({ query, provider } = {}) {
-    let selectedProvider = provider;
+    let results;
 
-    // Pick a random provider if not specified
-    if (!selectedProvider) {
-        const keys = Object.keys(PROVIDERS);
-        selectedProvider = keys[Math.floor(Math.random() * keys.length)];
+    switch (provider) {
+        case 'duckduckgo':
+            results = await duckduckgoImageSearch(query);
+            break;
+
+        default:
+            throw new Error(`Unknown provider: ${provider}`);
     }
 
-    const searchFn = PROVIDERS[selectedProvider];
-    if (!searchFn) throw new Error(`Unknown provider: ${selectedProvider}`);
-
-    const results = await searchFn(query);
-    if (!results.length) throw new Error(`No images found for "${query}" with ${selectedProvider}`);
+    if (!results.length) {
+        throw new Error('No images found');
+    }
 
     return results[Math.floor(Math.random() * results.length)];
 }
 
-module.exports = { getRandomImage, PROVIDERS };
+module.exports = { getRandomImage };
