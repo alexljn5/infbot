@@ -1,10 +1,9 @@
 require("dotenv").config();
 const { InferenceClient } = require("@huggingface/inference");
 const { EmbedBuilder } = require("discord.js");
-const { getRandomCreamImage } = require("../network/cream_net_fetch");
+const { getCharacterImage } = require("../network/sonic_characters");
 
 // ── HF Client ─────────────────────────────────────────────
-
 const rawToken = process.env.HF_TOKEN;
 const hfToken = typeof rawToken === "string" ? rawToken.trim() : "";
 
@@ -24,13 +23,12 @@ if (hfToken && hfToken.startsWith("hf_") && hfToken.length >= 35) {
 }
 
 // ── Moderation state ──────────────────────────────────────
-
 const offenseMap = new Map();
 
 const sexualKeywords = [
-    "sex", "sexy", "porn", "nude", "nsfw", "fuck", "fucking", "cum", "cumming",
-    "cock", "dick", "penis", "boobs", "tits", "ass", "pussy", "horny",
-    "breed", "breeding", "thrust", "moan", "orgasm"
+    "sex","sexy","porn","nude","nsfw","fuck","fucking","cum","cumming",
+    "cock","dick","penis","boobs","tits","ass","pussy","horny",
+    "breed","breeding","thrust","moan","orgasm"
 ];
 
 function containsSexual(text) {
@@ -38,22 +36,16 @@ function containsSexual(text) {
     return sexualKeywords.some(k => lower.includes(k));
 }
 
-// ── Chinese detection ─────────────────────────────────────
-
+// ── Chinese detection ─────────────────────────────────
 function containsChinese(text) {
     return /[\u3400-\u9FBF]/.test(text);
 }
 
-// ── AI call ───────────────────────────────────────────────
-
+// ── AI call ───────────────────────────────────────────
 async function callHuggingFaceAI(text) {
-
-    if (!hfClient) {
-        return "Cream is offline right now…";
-    }
+    if (!hfClient) return "Cream is offline right now…";
 
     try {
-
         const response = await hfClient.chatCompletion({
             model: "Qwen/Qwen2.5-7B-Instruct",
             messages: [
@@ -73,13 +65,9 @@ async function callHuggingFaceAI(text) {
         });
 
         let output = response?.choices?.[0]?.message?.content?.trim();
-
-        if (!output) {
-            return "…Cream got a little confused while thinking.";
-        }
+        if (!output) return "…Cream got a little confused while thinking.";
 
         if (containsChinese(output)) {
-
             const retry = await hfClient.chatCompletion({
                 model: "Qwen/Qwen2.5-7B-Instruct",
                 messages: [
@@ -88,117 +76,69 @@ async function callHuggingFaceAI(text) {
                 ],
                 max_tokens: 150
             });
-
             output = retry?.choices?.[0]?.message?.content?.trim() || output;
         }
 
         return output;
 
     } catch (err) {
-
         console.error("[HF] API error:", err);
-
         return "Cream's little brain got tangled… try again?";
     }
 }
 
-// ── Moderation logic ──────────────────────────────────────
-
+// ── Moderation logic ───────────────────────────────────
 async function handleSexualContent(message) {
-
     const id = message.author.id;
     const offenses = (offenseMap.get(id) || 0) + 1;
-
     offenseMap.set(id, offenses);
 
     if (offenses === 1) {
-
-        await message.reply(
-            "Stop. Cream is a child character. Sexual messages are not allowed."
-        );
-
+        await message.reply("Stop. Cream is a child character. Sexual messages are not allowed.");
     } else if (offenses === 2) {
-
-        await message.reply(
-            "Second warning. Continuing this behavior will result in a timeout."
-        );
-
+        await message.reply("Second warning. Continuing this behavior will result in a timeout.");
     } else if (offenses === 3) {
-
-        await message.reply(
-            "🔇 You are being timed out for inappropriate messages."
-        );
-
-        try {
-            await message.member.timeout(10 * 60 * 1000, "Sexual content toward Cream bot");
-        } catch (e) {
-            console.error("Timeout failed:", e);
-        }
-
+        await message.reply("🔇 You are being timed out for inappropriate messages.");
+        try { await message.member.timeout(10*60*1000, "Sexual content toward Cream bot"); } catch(e){console.error("Timeout failed:", e);}
     } else if (offenses >= 4) {
-
-        await message.reply(
-            "Repeated violations. You are being removed."
-        );
-
-        try {
-            await message.member.ban({ reason: "Repeated sexual messages toward Cream bot" });
-        } catch (e) {
-            console.error("Ban failed:", e);
-        }
+        await message.reply("Repeated violations. You are being removed.");
+        try { await message.member.ban({ reason: "Repeated sexual messages toward Cream bot" }); } catch(e){console.error("Ban failed:", e);}
     }
 }
 
-// ── Main handler ──────────────────────────────────────────
-
+// ── Main handler ───────────────────────────────────────
 async function handleCreamMessage(message) {
-
-    // Ignore bot messages (prevents infinite loops)
-    if (message.author.bot) {
-        return;
-    }
-
+    if (message.author.bot) return;
     const text = message.content.trim();
     if (!text) return;
 
-    // ── Moderation first
     if (containsSexual(text)) {
         await handleSexualContent(message);
         return;
     }
 
-    // ── Simple greeting
     const lower = text.toLowerCase();
-
-    if (lower === "hi" || lower === "hello" || lower === "hey") {
+    if (["hi","hello","hey"].includes(lower)) {
         await message.reply("Hi hi~! Cream is happy to see you!");
         return;
     }
 
-    // ── AI response
     const response = await callHuggingFaceAI(text);
 
-    // ── Random image chance
-    const sendImage = Math.random() < 0.18;
-
-    if (sendImage) {
-
+    // ── Random image chance (18%)
+    if (Math.random() < 0.18) {
         try {
-
-            const img = await getRandomCreamImage();
-
+            const { img, config } = await getCharacterImage('cream');
             if (img) {
-
                 const embed = new EmbedBuilder()
                     .setDescription(response)
                     .setImage(img)
-                    .setColor("#ff0002");
+                    .setColor(config.color);
 
                 await message.reply({ embeds: [embed] });
                 return;
             }
-
-        } catch (err) {
+        } catch(err) {
             console.error("Image fetch failed:", err);
         }
     }
