@@ -7,6 +7,7 @@ const { getRandomMetalsonicImage } = require('./network/metalsonic_net_fetch');
 const { getRandomAmyImage } = require('./network/amy_net_fetch');
 const { getRandomSonicexeImage } = require('./network/sonicexe_net_fetch');
 const { getRandomNeometalsonicImage } = require('./network/neo_metalsonic_net_fetch');
+const { getRandomTailsImage } = require('./network/tails_net_fetch');
 const { handleCreamMessage } = require('./creamai/cream');
 const { callAgonyCreamAI } = require('./creamai/agonycream');
 const { logError } = require('./logging/infbot_log_main');
@@ -25,6 +26,7 @@ async function sendCharacterImage(
         const serverEmoji = emojiName
             ? message.guild?.emojis.cache.find(e => e.name.toLowerCase() === emojiName.toLowerCase())
             : null;
+            //Change emoji here later to use one that already exists on the server
         const emojiStr = serverEmoji ? `<:${serverEmoji.name}:${serverEmoji.id}>` : '✨';
 
         const embed = new EmbedBuilder()
@@ -121,6 +123,10 @@ module.exports = {
         description: '.neometal - Random Neo Metal Sonic image',
         execute: (message) => sendCharacterImage(message, getRandomNeometalsonicImage, 'Neo Metal Sonic', '#696969', 'neometalsonic')
     },
+    tails: {
+        description: '.tails - Random Tails The Fox image',
+        execute: (message) => sendCharacterImage(message, getRandomTailsImage, 'Tails The Fox', '#696969', 'tails')
+    },
 
     cat: {
         description: 'Random ASCII cat!',
@@ -131,7 +137,7 @@ module.exports = {
 
             try {
                 const files = fs.readdirSync(dir).filter(f => /^cat\d+\.txt$/.test(f));
-                if (files.length === 0) return message.reply('No cat files found! 😿');
+                if (files.length === 0) return message.reply('No cat files found!');
 
                 const randomFile = files[Math.floor(Math.random() * files.length)];
                 const cat = fs.readFileSync(path.join(dir, randomFile), 'utf8').trim();
@@ -141,7 +147,7 @@ module.exports = {
                 logError(message.client, 'ASCII Cat Failed', 'Could not read ASCII cat files', [
                     { name: 'Error', value: err.message }
                 ]);
-                message.reply('No ascii dir or error reading cats! 🐱💔');
+                message.reply('No ascii dir or error reading cats!');
             }
         }
     },
@@ -182,21 +188,21 @@ module.exports = {
                 await logError(message.client, 'Thread Creation Failed', `User ${message.author.tag} couldn't create Cream thread`, [
                     { name: 'Error', value: err.message }
                 ]);
-                return message.reply("Couldn't create chat thread… hop hop 🐰");
+                return message.reply("Couldn't create chat thread… hop hop");
             }
 
             // Greeting embed
             try {
                 const img = await getRandomCreamImage().catch(() => null);
                 const embed = new EmbedBuilder()
-                    .setTitle(`Hi ${message.author.username}! Cream is here~ 🐰💕`)
+                    .setTitle(`Hi ${message.author.username}! Cream is here~`)
                     .setDescription("Just talk to me normally in this thread!\nI'll reply as Cream the Rabbit ♡")
                     .setColor('#ff0002');
 
                 if (img) embed.setImage(img);
                 await thread.send({ embeds: [embed] });
             } catch (err) {
-                await thread.send("Hi hi~! Cream is listening… (image failed tho 😿)");
+                await thread.send("Hi hi~! Cream is listening… (image failed tho...)");
             }
 
             // Message collector (no time limit – thread lives until archived)
@@ -207,7 +213,7 @@ module.exports = {
                     // Optional: one-time greeting if needed (but handler can handle it)
                     if (!greetedThreads.has(thread.id)) {
                         greetedThreads.add(thread.id);
-                        await thread.send("Eeee~ hi hi hi!! Cream is bouncing with happiness! What’s on your mind? 🐇✨");
+                        await thread.send("Eeee~ hi hi hi!! Cream is bouncing with happiness! What’s on your mind?");
                     }
 
                     await handleCreamMessage(msg); // assumes it sends the reply itself
@@ -217,7 +223,7 @@ module.exports = {
                         { name: 'Error', value: err.message, inline: false },
                         { name: 'Stack', value: (err.stack || '').slice(0, 800), inline: false }
                     ]);
-                    await thread.send("Oopsie… Cream's brain went poof! Try again? 😿💤");
+                    await thread.send("Oopsie… Cream's brain went poof! Try again?");
                 }
             });
         }
