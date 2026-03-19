@@ -1,4 +1,4 @@
-const { getRandomImage } = require('./imageFetcher');
+const { getRandomImage } = require('./imagefetcher');
 
 const CHARACTER_CONFIG = {
     cream: {
