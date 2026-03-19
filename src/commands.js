@@ -1,57 +1,59 @@
 const { EmbedBuilder } = require('discord.js');
-const { getRandomCreamImage } = require('./network/cream_net_fetch');
-const { getRandomBigImage } = require('./network/big_net_fetch');
-const { getRandomRougeImage } = require('./network/rouge_net_fetch');
-const { getRandomSonicImage } = require('./network/sonic_net_fetch');
-const { getRandomMetalsonicImage } = require('./network/metalsonic_net_fetch');
-const { getRandomAmyImage } = require('./network/amy_net_fetch');
-const { getRandomSonicexeImage } = require('./network/sonicexe_net_fetch');
-const { getRandomNeometalsonicImage } = require('./network/neo_metalsonic_net_fetch');
-const { getRandomTailsImage } = require('./network/tails_net_fetch');
 const { handleCreamMessage } = require('./creamai/cream');
 const { callAgonyCreamAI } = require('./creamai/agonycream');
 const { logError } = require('./logging/infbot_log_main');
+const { getCharacterImage, CHARACTER_CONFIG } = require('./sonic_characters');
 
 const greetedThreads = new Set();
 
-async function sendCharacterImage(
-    message,
-    fetchFn,
-    titleBase,
-    color,
-    emojiName = null
-) {
+/**
+ * Unified character image sender
+ */
+async function sendCharacterImage(message, type) {
     try {
-        const img = await fetchFn();
-        const serverEmoji = emojiName
-            ? message.guild?.emojis.cache.find(e => e.name.toLowerCase() === emojiName.toLowerCase())
+        const { img, config } = await getCharacterImage(type);
+
+        const serverEmoji = config.emoji
+            ? message.guild?.emojis.cache.find(e => e.name.toLowerCase() === config.emoji.toLowerCase())
             : null;
-            //Change emoji here later to use one that already exists on the server
-        const emojiStr = serverEmoji ? `<:${serverEmoji.name}:${serverEmoji.id}>` : '✨';
+
+        const emojiStr = serverEmoji
+            ? `<:${serverEmoji.name}:${serverEmoji.id}>`
+            : '✨';
 
         const embed = new EmbedBuilder()
-            .setTitle(`${emojiStr} ${titleBase} ${emojiStr}`)
+            .setTitle(`${emojiStr} ${config.title} ${emojiStr}`)
             .setImage(img)
-            .setColor(color)
+            .setColor(config.color)
             .setTimestamp();
 
         await message.channel.send({ embeds: [embed] });
+
     } catch (err) {
         const channelName = message.channel?.name || 'DM';
+
         await logError(
             message.client,
-            `Image Fetch Failed - ${titleBase}`,
-            `Failed to fetch image for **${message.author.tag}** in **${channelName}**`,
-            [
-                { name: 'User', value: `${message.author.tag} (${message.author.id})`, inline: true },
-                { name: 'Location', value: message.guild ? `${message.guild.name} (#${channelName})` : 'Direct Message', inline: true },
-                { name: 'Error', value: err.message || 'Unknown error', inline: false },
-                { name: 'Stack', value: (err.stack || 'No stack trace').slice(0, 800), inline: false }
-            ]
+            `Image Fetch Failed - ${type}`,
+            `Failed for ${message.author.tag} in ${channelName}`,
+            [{ name: 'Error', value: err.message }]
         );
-        console.error(`[Image:${titleBase}]`, err);
-        await message.reply(`Oops… couldn't fetch **${titleBase}** right now! 🐾 Try again soon~`);
+
+        console.error(`[Image:${type}]`, err);
+        await message.reply(`Couldn't fetch **${type}** right now.`);
     }
+}
+
+/**
+ * Auto-generate character commands
+ */
+const characterCommands = {};
+
+for (const key of Object.keys(CHARACTER_CONFIG)) {
+    characterCommands[key] = {
+        description: `.${key} - Random ${CHARACTER_CONFIG[key].title} image`,
+        execute: (message) => sendCharacterImage(message, key)
+    };
 }
 
 module.exports = {
@@ -71,62 +73,27 @@ module.exports = {
                     .setTitle('INFBOT Commands ♡')
                     .setColor('#ff0002')
                     .setThumbnail(message.client.user.displayAvatarURL())
-                    .setDescription('Here are all the cute commands you can use~')
+                    .setDescription('Here are all available commands')
                     .addFields(commands)
                     .setFooter({ text: `Requested by ${message.author.tag}` });
 
                 await message.channel.send({ embeds: [embed] });
+
             } catch (err) {
                 await logError(
                     message.client,
                     'Help Command Failed',
-                    `Failed to generate help embed for ${message.author.tag}`,
+                    `Failed for ${message.author.tag}`,
                     [{ name: 'Error', value: err.message }]
                 );
-                await message.reply("Couldn't show the help list… something went hoppy wrong! 🐰");
+
+                await message.reply("Couldn't show the help list.");
             }
         }
     },
 
-    // ────────────────────────────────────────────────
-    // Character image commands (using shared helper)
-    // ────────────────────────────────────────────────
-    cream: {
-        description: '.cream - Random Cream the Rabbit image',
-        execute: (message) => sendCharacterImage(message, getRandomCreamImage, 'Cream The Rabbit', '#ff0002', 'serveradmin')
-    },
-    big: {
-        description: '.big - Random Big the Cat image',
-        execute: (message) => sendCharacterImage(message, getRandomBigImage, 'Big the Cat', '#7A4FBF', 'big')
-    },
-    rouge: {
-        description: '.rouge - Random Rouge the Bat image',
-        execute: (message) => sendCharacterImage(message, getRandomRougeImage, 'Rouge the Bat', '#FFD700', 'rouge')
-    },
-    sonic: {
-        description: '.sonic - Random Sonic the Hedgehog image',
-        execute: (message) => sendCharacterImage(message, getRandomSonicImage, 'Sonic the Hedgehog', '#0066CC', 'sonic')
-    },
-    metal: {
-        description: '.metal - Random Metal Sonic image',
-        execute: (message) => sendCharacterImage(message, getRandomMetalsonicImage, 'Metal Sonic', '#A9A9A9', 'metalsonic')
-    },
-    amy: {
-        description: '.amy - Random Amy Rose image',
-        execute: (message) => sendCharacterImage(message, getRandomAmyImage, 'Amy Rose', '#FF69B4', 'amy')
-    },
-    sonicexe: {
-        description: '.sonicexe - Random Sonic.EXE image',
-        execute: (message) => sendCharacterImage(message, getRandomSonicexeImage, 'Sonic.EXE', '#8B0000', 'sonicexe')
-    },
-    neometal: {
-        description: '.neometal - Random Neo Metal Sonic image',
-        execute: (message) => sendCharacterImage(message, getRandomNeometalsonicImage, 'Neo Metal Sonic', '#696969', 'neometalsonic')
-    },
-    tails: {
-        description: '.tails - Random Tails The Fox image',
-        execute: (message) => sendCharacterImage(message, getRandomTailsImage, 'Tails The Fox', '#696969', 'tails')
-    },
+    // Inject all character commands
+    ...characterCommands,
 
     cat: {
         description: 'Random ASCII cat!',
@@ -137,17 +104,19 @@ module.exports = {
 
             try {
                 const files = fs.readdirSync(dir).filter(f => /^cat\d+\.txt$/.test(f));
-                if (files.length === 0) return message.reply('No cat files found!');
+                if (!files.length) return message.reply('No cat files found!');
 
                 const randomFile = files[Math.floor(Math.random() * files.length)];
                 const cat = fs.readFileSync(path.join(dir, randomFile), 'utf8').trim();
 
                 message.reply(`\`\`\`\n${cat}\n\`\`\``);
+
             } catch (err) {
-                logError(message.client, 'ASCII Cat Failed', 'Could not read ASCII cat files', [
+                logError(message.client, 'ASCII Cat Failed', 'File read error', [
                     { name: 'Error', value: err.message }
                 ]);
-                message.reply('No ascii dir or error reading cats!');
+
+                message.reply('Error reading ASCII cats.');
             }
         }
     },
@@ -156,9 +125,9 @@ module.exports = {
         description: 'Reverse text',
         execute: (message) => {
             const text = message.content.slice(9).trim();
-            if (!text) return message.reply('Nothing to reverse! Try `.reverse hello`');
-            const reversed = text.split('').reverse().join('');
-            message.reply(reversed);
+            if (!text) return message.reply('Nothing to reverse.');
+
+            message.reply(text.split('').reverse().join(''));
         }
     },
 
@@ -167,80 +136,88 @@ module.exports = {
         execute: (message) => {
             const chars = '\u030d\u030e\u0304\u0305\u033f\u0311\u0306\u0310\u0352\u0357\u0351\u0307\u0308\u0303\u0302\u030a\u0348\u0341\u0344\u034a\u034b\u034c'.split('');
             const text = message.content.slice(6).trim() || 'zalgo';
+
             const zalgoed = [...text].map(c =>
-                c + Array.from({ length: Math.floor(Math.random() * 7) }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+                c + Array.from({ length: Math.floor(Math.random() * 7) },
+                () => chars[Math.floor(Math.random() * chars.length)]).join('')
             ).join('');
-            message.reply(zalgoed || 'Zalgo ate the text!');
+
+            message.reply(zalgoed);
         }
     },
 
     talk: {
-        description: '.talk - Start a long-term chat thread with Cream!',
+        description: '.talk - Start a chat thread',
         execute: async (message) => {
             let thread;
+
             try {
                 thread = await message.channel.threads.create({
                     name: `Cream Chat - ${message.author.username}`,
-                    autoArchiveDuration: 1440, // 24 hours
-                    reason: 'Chatting with Cream ♡'
+                    autoArchiveDuration: 1440
                 });
+
             } catch (err) {
-                await logError(message.client, 'Thread Creation Failed', `User ${message.author.tag} couldn't create Cream thread`, [
+                await logError(message.client, 'Thread Creation Failed', message.author.tag, [
                     { name: 'Error', value: err.message }
                 ]);
-                return message.reply("Couldn't create chat thread… hop hop");
+
+                return message.reply("Couldn't create thread.");
             }
 
-            // Greeting embed
             try {
-                const img = await getRandomCreamImage().catch(() => null);
+                const { img } = await getCharacterImage('cream').catch(() => ({}));
+
                 const embed = new EmbedBuilder()
-                    .setTitle(`Hi ${message.author.username}! Cream is here~`)
-                    .setDescription("Just talk to me normally in this thread!\nI'll reply as Cream the Rabbit ♡")
+                    .setTitle(`Hi ${message.author.username}`)
+                    .setDescription("Talk to me in this thread!")
                     .setColor('#ff0002');
 
                 if (img) embed.setImage(img);
+
                 await thread.send({ embeds: [embed] });
-            } catch (err) {
-                await thread.send("Hi hi~! Cream is listening… (image failed tho...)");
+
+            } catch {
+                await thread.send("Hi! I'm here.");
             }
 
-            // Message collector (no time limit – thread lives until archived)
             const collector = thread.createMessageCollector({ filter: m => !m.author.bot });
 
             collector.on('collect', async (msg) => {
                 try {
-                    // Optional: one-time greeting if needed (but handler can handle it)
                     if (!greetedThreads.has(thread.id)) {
                         greetedThreads.add(thread.id);
-                        await thread.send("Eeee~ hi hi hi!! Cream is bouncing with happiness! What’s on your mind?");
+                        await thread.send("Hi hi!!");
                     }
 
-                    await handleCreamMessage(msg); // assumes it sends the reply itself
+                    await handleCreamMessage(msg);
+
                 } catch (err) {
-                    await logError(message.client, 'Cream AI Error in Thread', `Thread ${thread.id} – msg by ${msg.author.tag}`, [
-                        { name: 'User Message', value: msg.content.slice(0, 500) || '[empty]', inline: false },
-                        { name: 'Error', value: err.message, inline: false },
-                        { name: 'Stack', value: (err.stack || '').slice(0, 800), inline: false }
+                    await logError(message.client, 'Cream AI Error', thread.id, [
+                        { name: 'Error', value: err.message }
                     ]);
-                    await thread.send("Oopsie… Cream's brain went poof! Try again?");
+
+                    await thread.send("Something broke.");
                 }
             });
         }
     },
 
     agony: {
-        description: '.agony - Ask INFBOT to produce unsettling text',
+        description: '.agony - Generate unsettling text',
         execute: async (message) => {
-            const prompt = message.content.slice(7).trim() || 'Describe a surreal, eerie scenario.';
+            const prompt = message.content.slice(7).trim() || 'Describe something eerie.';
+
             try {
                 const response = await callAgonyCreamAI(prompt);
-                await message.reply(response || '…the void stared back.');
+                await message.reply(response || '...');
+
             } catch (err) {
-                await logError(message.client, 'Agony Command Failed', `Prompt: "${prompt.slice(0, 200)}..." by ${message.author.tag}`, [
+                await logError(message.client, 'Agony Failed', message.author.tag, [
                     { name: 'Error', value: err.message }
                 ]);
-                await message.reply("INFBOT couldn't think… the darkness is too thick tonight.");
+
+                await message.reply("Failed.");
             }
         }
     }
