@@ -2,7 +2,7 @@ const { EmbedBuilder } = require('discord.js');
 const { handleCreamMessage } = require('./creamai/cream');
 const { callAgonyCreamAI } = require('./creamai/agonycream');
 const { logError } = require('./logging/infbot_log_main');
-const { getCharacterImage, CHARACTER_CONFIG } = require('./sonic_characters');
+const { getCharacterImage, CHARACTER_CONFIG } = require('./network/sonic_characters');
 
 const greetedThreads = new Set();
 
