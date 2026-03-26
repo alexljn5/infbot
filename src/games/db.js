@@ -1,7 +1,7 @@
 const mariadb = require('mariadb');
 
 const pool = mariadb.createPool({
-    host: 'localhost',      // your MariaDB host
+    host: '127.0.0.1',      // your MariaDB host
     user: 'infbot',         // DB username
     password: 'password',   // DB password
     database: 'infbot_game',
