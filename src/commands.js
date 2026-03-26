@@ -223,13 +223,34 @@ module.exports = {
         }
     },
 
-    game: {
-        description: '.game - simple player actions',
-        execute: async (message) => {
+game: {
+    description: '.game - simple player actions',
+    execute: async (message) => {
+        try {
+            // Parse command and args
             const args = message.content.slice(6).trim().split(' ');
             const cmd = args.shift()?.toLowerCase();
+
+            // Check if game is loaded
+            if (!game || typeof game.handleCommand !== 'function') {
+                console.error('[Game] Game instance is missing or invalid');
+                return await message.reply("Game isn't ready yet.");
+            }
+
+            // Execute the command
             const response = game.handleCommand(message.author.id, cmd, args);
-            if (response) await message.reply(response);
+
+            if (!response) {
+                console.log(`[Game] No response for command: ${cmd}`, args);
+                return await message.reply("Nothing happened... maybe try another command?");
+            }
+
+            await message.reply(response);
+
+        } catch (err) {
+            console.error('[Game] Command execution failed:', err);
+            await message.reply("Something went wrong with the game command.");
         }
     }
+}
 };
