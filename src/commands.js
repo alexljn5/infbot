@@ -228,7 +228,7 @@ game: {
         execute: async (message) => {
             try {
                 // Add player to ensure they exist
-                game.addPlayer(message.author.id);
+                await game.addPlayer(message.author.id);
                 const player = game.players.get(message.author.id);
 
                 // Build buttons for actions
