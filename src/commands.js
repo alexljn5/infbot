@@ -3,6 +3,7 @@ const { handleCreamMessage } = require('./creamai/cream');
 const { callAgonyCreamAI } = require('./creamai/agonycream');
 const { logError } = require('./logging/infbot_log_main');
 const { getCharacterImage, CHARACTER_CONFIG } = require('./network/sonic_characters');
+const game = require('./games/game_main');
 
 const greetedThreads = new Set();
 
@@ -219,6 +220,16 @@ module.exports = {
 
                 await message.reply("Failed.");
             }
+        }
+    },
+
+    game: {
+        description: '.game - simple player actions',
+        execute: async (message) => {
+            const args = message.content.slice(6).trim().split(' ');
+            const cmd = args.shift()?.toLowerCase();
+            const response = game.handleCommand(message.author.id, cmd, args);
+            if (response) await message.reply(response);
         }
     }
 };
